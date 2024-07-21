@@ -1,0 +1,57 @@
+import math
+from collections import defaultdict
+
+# Sample data: user ratings for movies
+user_ratings = {
+    'Alice': {'Inception': 5, 'Pulp Fiction': 4, 'The Matrix': 4, 'Toy Story': 3},
+    'Bob': {'Inception': 4, 'Pulp Fiction': 5, 'The Matrix': 5, 'Toy Story': 2},
+    'Charlie': {'Inception': 5, 'Pulp Fiction': 4, 'The Matrix': 4, 'Toy Story': 5},
+    'David': {'Inception': 3, 'Pulp Fiction': 4, 'The Matrix': 2, 'Toy Story': 5},
+}
+
+def cosine_similarity(ratings1, ratings2):
+    common_items = set(ratings1.keys()) & set(ratings2.keys())
+    if not common_items:
+        return 0
+
+    sum1 = sum([ratings1[item] ** 2 for item in common_items])
+    sum2 = sum([ratings2[item] ** 2 for item in common_items])
+    sum_product = sum([ratings1[item] * ratings2[item] for item in common_items])
+    
+    return sum_product / (math.sqrt(sum1) * math.sqrt(sum2))
+
+def get_similar_users(target_user, user_ratings):
+    similarities = {}
+    for user, ratings in user_ratings.items():
+        if user != target_user:
+            similarity = cosine_similarity(user_ratings[target_user], ratings)
+            similarities[user] = similarity
+    return sorted(similarities.items(), key=lambda x: x[1], reverse=True)
+
+def recommend_movies(target_user, user_ratings, num_recommendations=3):
+    similar_users = get_similar_users(target_user, user_ratings)
+    recommendations = defaultdict(float)
+    similarity_sums = defaultdict(float)
+    
+    for similar_user, similarity in similar_users:
+        for movie, rating in user_ratings[similar_user].items():
+            if movie not in user_ratings[target_user] or user_ratings[target_user][movie] == 0:
+                recommendations[movie] += rating * similarity
+                similarity_sums[movie] += similarity
+    
+    # Normalize recommendations
+    for movie in recommendations:
+        if similarity_sums[movie] != 0:
+            recommendations[movie] /= similarity_sums[movie]
+    
+    # Sort recommendations
+    sorted_recommendations = sorted(recommendations.items(), key=lambda x: x[1], reverse=True)
+    
+    return sorted_recommendations[:num_recommendations]
+
+# Example usage
+target_user = 'Alice'
+recommended_movies = recommend_movies(target_user, user_ratings)
+print(f"Recommended movies for {target_user}:")
+for movie, score in recommended_movies:
+    print(f"{movie}: {score:.2f}")
